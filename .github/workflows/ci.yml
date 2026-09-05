@@ -1,0 +1,48 @@
+# office-crew-ci-gates: strict-v10
+# Auto-generated for vanilla web projects (GitHub Actions).
+# NO pytest — pure frontend. Tests via node:test when tests/*.test.mjs is present.
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - shell: bash
+        run: |
+          shopt -s nullglob
+          tests=(tests/*.test.mjs tests/*.test.js)
+          if [ ${#tests[@]} -gt 0 ]; then
+            echo "Running ${#tests[@]} node test file(s)..."
+            node --test "${tests[@]}"
+          elif [ -d tests ]; then
+            echo "tests/ exists, but no .test.mjs/.test.js — skip"
+          else
+            echo "No tests/ directory — static project without tests, accepted"
+          fi
+  lint:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - shell: bash
+        # `|| true` for the same reason the python template's types/security jobs
+        # carry it: GitHub reports a continue-on-error job's check-run conclusion as
+        # `failure`, and this orchestrator aggregates check-runs — so a job documented
+        # as a warning reds the whole pipeline without it, and under CI_POLICY=required
+        # that costs a ticket.
+        run: |
+          if [ -f .eslintrc.json ] || [ -f .eslintrc.js ] || [ -f eslint.config.js ]; then
+            npx --yes eslint . --max-warnings=0 || true
+          else
+            echo "No ESLint config — skip"
+          fi
