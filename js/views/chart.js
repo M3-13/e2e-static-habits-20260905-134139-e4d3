@@ -5,10 +5,17 @@
 // computed here from `habit.checkins` (ISO date strings "YYYY-MM-DD"). Colors
 // are read live from the CSS custom properties in `styles.css`, so the chart
 // follows the current theme (light / dark) automatically.
+//
+// Geometry follows DESIGN.md "CanvasChart": 8 evenly distributed bars with a
+// bar width of ~16px and a gap of ~20px, accent fill proportional to the weekly
+// quota, faint horizontal gridlines (muted @ 20%), 11px muted week + percent
+// labels and a 13px muted empty-state hint.
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const WEEKS_TO_SHOW = 8;
 const DAYS_PER_WEEK = 7;
+
+const BAR_WIDTH = 16;
+const BAR_GAP = 20;
 
 /** Returns the Monday 00:00 (local) that starts the week containing `date`. */
 function startOfWeek(date) {
@@ -49,12 +56,18 @@ function formatLabel(start) {
  * Aggregates the check-ins into `WEEKS_TO_SHOW` buckets ending with the current
  * week. Returns an array (oldest -> newest) of
  * `{ start: Date, label: string, count: number }`.
+ *
+ * Week starts are advanced with calendar arithmetic (`setDate`), not fixed
+ * millisecond offsets, so a DST transition cannot shift a generated week start
+ * off its local Monday 00:00.
  */
 function computeWeeks(checkins) {
   const today = startOfWeek(new Date());
   const starts = [];
   for (let i = WEEKS_TO_SHOW - 1; i >= 0; i--) {
-    starts.push(new Date(today.getTime() - i * WEEK_MS));
+    const s = new Date(today.getTime());
+    s.setDate(s.getDate() - 7 * i);
+    starts.push(s);
   }
 
   const counts = starts.map(() => 0);
@@ -87,8 +100,20 @@ function readColors(canvas) {
     fg: get("--color-fg"),
     muted: get("--color-muted"),
     accent: get("--color-accent"),
-    border: get("--color-border"),
   };
+}
+
+/** Converts a "#rrggbb" hex string to `rgba(r, g, b, alpha)`; passthrough otherwise. */
+function withAlpha(hex, alpha) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) {
+    return hex;
+  }
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 /**
@@ -120,10 +145,12 @@ export function renderChart(habit, canvas) {
   ctx.clearRect(0, 0, cssWidth, cssHeight);
 
   const colors = readColors(canvas);
-  const fg = colors.fg || "#1a1d1f";
   const muted = colors.muted || "#6b7280";
   const accent = colors.accent || "#3e7b4f";
-  const border = colors.border || "#e4e6e9";
+
+  ctx.font = '11px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  ctx.textBaseline = "middle";
+  ctx.lineWidth = 1;
 
   const padTop = 12;
   const padRight = 8;
@@ -133,16 +160,35 @@ export function renderChart(habit, canvas) {
   const plotW = cssWidth - padLeft - padRight;
   const plotH = cssHeight - padTop - padBottom;
 
-  ctx.font = '11px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-  ctx.textBaseline = "middle";
-  ctx.lineWidth = 1;
+  // Empty state: centered 13px muted hint instead of an empty chart.
+  const totalCheckins = weeks.reduce((sum, w) => sum + w.count, 0);
+  if (totalCheckins === 0) {
+    ctx.font = '13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = muted;
+    ctx.textAlign = "center";
+    ctx.fillText("Noch keine Einträge", cssWidth / 2, cssHeight / 2);
+    return;
+  }
 
-  // Y axis + horizontal gridlines at 0 / 50 / 100 %.
-  const yTicks = [0, 0.5, 1];
+  // 8 evenly distributed bars, ~16px wide with ~20px gap, centered.
+  let barWidth = BAR_WIDTH;
+  let barGap = BAR_GAP;
+  let chartW = WEEKS_TO_SHOW * barWidth + (WEEKS_TO_SHOW - 1) * barGap;
+  if (chartW > plotW) {
+    const scale = plotW / chartW;
+    barWidth = Math.max(2, Math.floor(barWidth * scale));
+    barGap = Math.floor(barGap * scale);
+    chartW = WEEKS_TO_SHOW * barWidth + (WEEKS_TO_SHOW - 1) * barGap;
+  }
+  const pitch = barWidth + barGap;
+  const offsetX = padLeft + (plotW - chartW) / 2;
+
+  // Y axis + faint horizontal gridlines (muted @ 20%) at 0 / 50 / 100 %.
+  const gridColor = withAlpha(muted, 0.2);
   ctx.textAlign = "right";
-  for (const ratio of yTicks) {
+  for (const ratio of [0, 0.5, 1]) {
     const y = padTop + plotH - ratio * plotH;
-    ctx.strokeStyle = border;
+    ctx.strokeStyle = gridColor;
     ctx.beginPath();
     ctx.moveTo(padLeft, y);
     ctx.lineTo(cssWidth - padRight, y);
@@ -152,27 +198,25 @@ export function renderChart(habit, canvas) {
     ctx.fillText(`${Math.round(ratio * 100)}%`, padLeft - 6, y);
   }
 
-  // Bars + week labels.
-  const slotW = plotW / WEEKS_TO_SHOW;
-  const barW = Math.max(4, slotW * 0.55);
-
+  // Bars, percent labels and week labels.
   ctx.textAlign = "center";
   weeks.forEach((week, i) => {
-    const centerX = padLeft + slotW * i + slotW / 2;
+    const centerX = offsetX + pitch * i + barWidth / 2;
     const ratio = Math.min(1, week.count / DAYS_PER_WEEK);
     const barH = ratio * plotH;
-    const barX = centerX - barW / 2;
+    const barX = centerX - barWidth / 2;
     const barY = padTop + plotH - barH;
 
     if (barH > 0) {
       ctx.fillStyle = accent;
-      ctx.fillRect(barX, barY, barW, barH);
+      ctx.fillRect(barX, barY, barWidth, barH);
     }
 
     // Percentage above each bar.
-    const pct = Math.round(ratio * 100);
-    ctx.fillStyle = week.count > 0 ? accent : muted;
-    ctx.fillText(`${pct}%`, centerX, barY - 8);
+    if (week.count > 0) {
+      ctx.fillStyle = muted;
+      ctx.fillText(`${Math.round(ratio * 100)}%`, centerX, barY - 8);
+    }
 
     // Week label (Monday of that week) below the axis.
     ctx.fillStyle = muted;
