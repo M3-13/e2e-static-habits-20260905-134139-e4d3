@@ -1,0 +1,14 @@
+{
+  "runcontract": 1,
+  "services": [
+    {
+      "name": "web",
+      "dir": ".",
+      "stack": "web-static",
+      "kind": "static",
+      "serve_dir": ".",
+      "port": 8000,
+      "port_env": "PORT"
+    }
+  ]
+}
