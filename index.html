@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Ein rein lokaler Habit-Tracker: Gewohnheiten anlegen, täglich abhaken und Serien verfolgen – alle Daten bleiben in deinem Browser."
+    />
+    <title>Habit-Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container header-inner">
+        <h1 class="app-title">Habit-Tracker</h1>
+
+        <div class="header-actions">
+          <div class="filter-pills" role="group" aria-label="Gewohnheiten filtern">
+            <button class="filter-pill is-active" type="button" data-filter="active" aria-pressed="true">
+              Aktiv
+            </button>
+            <button class="filter-pill" type="button" data-filter="archived" aria-pressed="false">
+              Archiviert
+            </button>
+            <button class="filter-pill" type="button" data-filter="all" aria-pressed="false">
+              Alle
+            </button>
+          </div>
+
+          <button
+            id="theme-toggle"
+            class="toggle"
+            type="button"
+            data-action="toggle-theme"
+            role="switch"
+            aria-checked="false"
+            aria-label="Dark Mode umschalten"
+          >
+            <span class="toggle-track" aria-hidden="true">
+              <span class="toggle-knob"></span>
+            </span>
+            <span class="toggle-label">Dark Mode</span>
+          </button>
+
+          <button class="button button-secondary" type="button" data-action="export">Export</button>
+          <button class="button button-secondary" type="button" data-action="import">Import</button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden />
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="create-section" aria-label="Neue Gewohnheit anlegen">
+        <form id="create-form" class="create-form" novalidate>
+          <input
+            id="habit-name"
+            class="input"
+            type="text"
+            placeholder="Neue Gewohnheit…"
+            maxlength="50"
+            autocomplete="off"
+            aria-label="Name der neuen Gewohnheit"
+          />
+          <button class="button" type="submit">Anlegen</button>
+        </form>
+      </section>
+
+      <section class="habits-section" aria-label="Gewohnheiten">
+        <div id="habit-list" class="habit-list"></div>
+        <div id="empty-state" class="empty-state">
+          <div class="empty-state-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="">
+              <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="2" />
+              <path
+                d="M15 24.5 L21 30.5 L33 17.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          <h2 class="empty-state-title">Noch keine Gewohnheiten</h2>
+          <p class="empty-state-text">
+            Lege deine erste Gewohnheit an und beginne mit dem täglichen Tracking.
+          </p>
+          <button class="button" type="button" data-action="focus-create">
+            Erste Gewohnheit anlegen
+          </button>
+          <p class="empty-state-privacy">
+            Alle Daten bleiben lokal in deinem Browser (LocalStorage).
+          </p>
+        </div>
+      </section>
+
+      <section class="chart-section" aria-label="Wochenübersicht">
+        <h2 class="section-title">Wochenübersicht</h2>
+        <canvas id="chart" class="chart-canvas" aria-label="Balkendiagramm der letzten acht Wochen"></canvas>
+      </section>
+
+      <section id="privacy" class="legal-section" aria-label="Datenschutzerklärung">
+        <h2 class="section-title">Datenschutzerklärung</h2>
+        <p>
+          Diese App speichert alle Daten ausschließlich lokal in deinem Browser (LocalStorage).
+          Es werden keine Daten an einen Server übertragen und keine externen Ressourcen geladen.
+        </p>
+      </section>
+
+      <section id="imprint" class="legal-section" aria-label="Impressum">
+        <h2 class="section-title">Impressum</h2>
+        <p>Diese Anwendung ist ein lokales Werkzeug ohne Anbieter im Sinne des Telemediengesetzes.</p>
+      </section>
+
+      <section class="danger-zone" aria-label="Datenverwaltung">
+        <button class="button button-danger" type="button" data-action="delete-all">
+          Alle Daten löschen
+        </button>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div class="container footer-inner">
+        <a class="footer-link" href="#privacy">Datenschutz</a>
+        <a class="footer-link" href="#imprint">Impressum</a>
+      </div>
+    </footer>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
