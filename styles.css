@@ -7,7 +7,7 @@
   --color-bg: #fafaf7;
   --color-fg: #1a1d1f;
   --color-accent: #3e7b4f;
-  --color-accent-hover: #356b44;
+  --color-accent_hover: #356b44;
   --color-success: #2e9e5b;
   --color-danger: #c0392b;
   --color-border: #e4e6e9;
@@ -224,7 +224,7 @@ a:hover {
 }
 
 .button:hover {
-  background: var(--color-accent-hover);
+  background: var(--color-accent_hover);
 }
 
 .button:active {

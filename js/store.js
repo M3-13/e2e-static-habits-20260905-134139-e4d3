@@ -6,7 +6,14 @@ const FILTERS = ["active", "archived", "all"];
 const THEMES = ["light", "dark"];
 
 function isValidDateIso(value) {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const date = new Date(value + "T00:00:00Z");
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+  return date.toISOString().slice(0, 10) === value;
 }
 
 function isValidHabit(value) {
@@ -26,6 +33,23 @@ function isValidHabit(value) {
     return false;
   }
   return value.checkins.every(isValidDateIso);
+}
+
+/**
+ * Reduces a validated habit to exactly the known fields of the contract
+ * ({id, name, archived, checkins}) and de-duplicates its checkins. Any unknown
+ * extra field coming from LocalStorage is discarded here, not just on save.
+ *
+ * @param {{id: string, name: string, archived: boolean, checkins: string[]}} habit
+ * @returns {{id: string, name: string, archived: boolean, checkins: string[]}}
+ */
+function normalizeHabit(habit) {
+  return {
+    id: habit.id,
+    name: habit.name,
+    archived: habit.archived,
+    checkins: Array.from(new Set(habit.checkins)),
+  };
 }
 
 /**
@@ -61,7 +85,7 @@ export function loadState() {
   }
 
   if (Array.isArray(parsed.habits)) {
-    state.habits = parsed.habits.filter(isValidHabit);
+    state.habits = parsed.habits.filter(isValidHabit).map(normalizeHabit);
   }
 
   if (
